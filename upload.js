@@ -1,70 +1,64 @@
-function formatBytes(bytes, decimals = 2) {
-    if (!+bytes) {
-        return '0 Bytes';
+export default class Upload {
+    constructor(selector, options = {}) {
+        this.files = [];
+        this.options = options;
+        this.onUpload = this.options.onUpload || this.noop;
+
+        this.input = document.querySelector(selector);
+        this.preview = this.element('div', ['preview']);
+        this.open = this.element('button', ['btn'], 'Open');
+        this.upload = this.element('button', ['btn', 'primary'], 'Upload');
+        this.upload.style.display = 'none';
+
+        if (this.options.multi) {
+            this.input.setAttribute('multiple', true);
+        }
+
+        if (this.options.accept && Array.isArray(this.options.accept)) {
+            this.input.setAttribute('accept', this.options.accept.join(','));
+        }
+
+        this.input.insertAdjacentElement('afterend', this.preview);
+        this.input.insertAdjacentElement('afterend', this.upload);
+        this.input.insertAdjacentElement('afterend', this.open);
+
+        this.open.addEventListener('click', this.triggerInput);
+        this.upload.addEventListener('click', this.uploadHandler);
+
+        this.input.addEventListener('change', this.changeHandler);
+        this.preview.addEventListener('click', this.removeHandler);
     }
 
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    noop() {}
 
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    element(tag, classes = [], content) {
+        const node = document.createElement(tag);
 
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-}
+        if (classes.length) {
+            node.classList.add(...classes);
+        }
 
-const element = (tag, classes = [], content) => {
-    const node = document.createElement(tag);
+        if (content) {
+            node.textContent = content;
+        }
 
-    if (classes.length) {
-        node.classList.add(...classes);
+        return node;
     }
 
-    if (content) {
-        node.textContent = content;
-    }
+    triggerInput = () => this.input.click();
 
-    return node;
-};
-
-const noop = () => {};
-
-export function upload(selector, options = {}) {
-    let files = [];
-    const onUpload = options.onUpload || noop;
-
-    const input = document.querySelector(selector);
-    const preview = element('div', ['preview']);
-
-    const open = element('button', ['btn'], 'Open');
-    const upload = element('button', ['btn', 'primary'], 'Upload');
-    upload.style.display = 'none'; // hide upload button until we drop images
-
-    if (options.multi) {
-        input.setAttribute('multiple', true);
-    }
-
-    if (options.accept && Array.isArray(options.accept)) {
-        input.setAttribute('accept', options.accept.join(','));
-    }
-
-    input.insertAdjacentElement('afterend', preview);
-    input.insertAdjacentElement('afterend', upload);
-    input.insertAdjacentElement('afterend', open);
-
-    const triggerInput = () => input.click();
-
-    const changeHandler = event => {
+    changeHandler = event => {
         if (event.target.files.length === 0) {
             return
         }
 
-        upload.style.display = 'inline-block';
+        this.upload.style.display = 'inline-block';
 
-        files = Array.from(event.target.files); // Array.from {{}, {}} => [{}, {}]
+        this.files = Array.from(event.target.files); // Array.from {{}, {}} => [{}, {}]
 
-        preview.innerHTML = '';
+        this.preview.innerHTML = '';
 
-        files.forEach(file => {
+        this.files.forEach(file => {
             if (!file.type.match(/image/gi)) {
                 return
             }
@@ -74,13 +68,13 @@ export function upload(selector, options = {}) {
             reader.onload = ev => { // Обработчик события reader.addEventListener('onload', (ev) => ...)
                 const src = ev.target.result;
                 // console.log(file);
-                preview.insertAdjacentHTML('afterbegin', `
+                this.preview.insertAdjacentHTML('afterbegin', `
                     <div class="preview-image">
                         <div class="preview-remove" data-name="${file.name}">&times;</div>
                         <img src="${src}" alt="${file.name}">
                         <div class="preview-info">
                             <span>${file.name.slice(0, 10)}...${file.name.split('.').pop()}</span>
-                            ${formatBytes(file.size, 1)}
+                            ${this.formatBytes(file.size, 1)}
                         </div>
                     </div>
                 `);
@@ -90,39 +84,47 @@ export function upload(selector, options = {}) {
         });
     }
 
-    const removeHandler = event => {
+    formatBytes(bytes, decimals = 2) {
+        if (!+bytes) {
+            return '0 Bytes';
+        }
+
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+    }
+
+    removeHandler = event => {
         if (!event.target.dataset.name) {
             return
         }
 
         const { name } = event.target.dataset; // img name
 
-        files = files.filter(file => file.name !== name);
+        this.files = this.files.filter(file => file.name !== name);
 
-        if (!files.length) {
-            upload.style.display = 'none';
+        if (!this.files.length) {
+            this.upload.style.display = 'none';
         }
 
-        const block = preview.querySelector(`[data-name="${name}"]`).parentNode;
+        const block = this.preview.querySelector(`[data-name="${name}"]`).parentNode;
 
         block.classList.add('removing');
         setTimeout(() => block.remove(), 300);
     }
 
-    const clearPreview = (el) => {
+    clearPreview = el => {
         el.style.bottom = '4px';
         el.innerHTML = `<div class="preview-info-progress"></div>`;
     };
 
-    const uploadHandler = () => {
-        preview.querySelectorAll('.preview-remove').forEach(el => el.remove());
-        const previewInfo = preview.querySelectorAll('.preview-info').forEach(el => clearPreview(el));
-        onUpload(files, previewInfo);
+    uploadHandler = () => {
+        this.preview.querySelectorAll('.preview-remove').forEach(el => el.remove());
+        const previewInfo = this.preview.querySelectorAll('.preview-info').forEach(el => this.clearPreview(el));
+        this.onUpload(files, previewInfo);
     };
-
-    open.addEventListener('click', triggerInput);
-    upload.addEventListener('click', uploadHandler);
-
-    input.addEventListener('change', changeHandler);
-    preview.addEventListener('click', removeHandler);
 }

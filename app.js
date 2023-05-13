@@ -1,7 +1,7 @@
 import firebase from "firebase/app";
 import { initializeApp } from "firebase/app";
 import "firebase/storage";
-import { upload } from "./upload";
+import Upload from "./upload";
 
 const firebaseConfig = {
     apiKey: "xxx",
@@ -15,9 +15,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 const storage = firebase.storage();
-console.log(storage);
+// console.log(storage);
 
-upload('#file', {
+new Upload('#file', {
     multi: true,
     accept: ['.png', '.jpeg', '.jpg', '.gif'],
     onUpload: function(files, blocks) {
