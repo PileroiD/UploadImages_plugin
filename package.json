@@ -1,0 +1,22 @@
+{
+    "name": "upload_images_plugin",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "serve": "parcel index.html",
+        "start": "parcel",
+        "build": "parcel build"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "@parcel/transformer-sass": "^2.8.3",
+        "parcel": "^2.8.3",
+        "process": "^0.11.10"
+    },
+    "dependencies": {
+        "firebase": "^9.21.0"
+    }
+}
